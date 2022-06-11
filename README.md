@@ -1,1 +1,1 @@
-Hi, I’m Luzivog a beginner node js developer.
+Hi, I’m Luzivog aiming to be a fullstack developper.
