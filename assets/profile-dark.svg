@@ -13,17 +13,13 @@
     }
     .portrait { font-weight: 500; }
     .label { fill: #b96779; font-weight: 600; }
-    .dots { fill: #7f8995; }
     .value { fill: #a5d6ff; }
-    .row { font-size: 15.1px; }
-    .output-header, .section { font-size: 15.1px; }
-    .signal { fill: #72cf93; }
-    .cursor { animation: blink 1.1s steps(2, start) infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
-    @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+    .row { font-size: 16px; }
+    .host { fill: #b96779; font-size: 16px; font-weight: 700; }
+    .underline { fill: #7f8995; font-size: 16px; }
   </style>
   <rect x="1" y="1" width="1178" height="598" rx="18" fill="#0d0f12" stroke="#2b3038" stroke-width="2"/>
-  <line x1="558" y1="22" x2="558" y2="578" stroke="#242932"/>
+  <text class="row" x="24" y="20" fill="#eee9e2">~ ❯ whoami</text>
   <text class="portrait" x="24.0" y="36.0" font-size="10.6" fill="#7e7e7e">^</text>
 <text class="portrait" x="30.4" y="36.0" font-size="10.6" fill="#7e7e7e">^</text>
 <text class="portrait" x="36.7" y="36.0" font-size="10.6" fill="#7e7e7e">^</text>
@@ -3097,20 +3093,33 @@
 <text class="portrait" x="525.6" y="567.6" font-size="10.6" fill="#9c8a90">?</text>
 <text class="portrait" x="532.0" y="567.6" font-size="10.6" fill="#a28a90">?</text>
 <text class="portrait" x="538.4" y="567.6" font-size="10.6" fill="#a28a90">]</text>
-  <text class="row" x="590" y="38" fill="#eee9e2">thomas@leadlord:~$ ./profile</text>
-  <text class="output-header" x="590" y="75" fill="#eee9e2">thomas@leadlord<tspan class="dots" fill="#7f8995"> ----------------------------------</tspan></text>
-  <text class="row" x="590" y="110"><tspan class="label" fill="#b96779">name:</tspan><tspan class="dots" fill="#7f8995"> ............. </tspan><tspan class="value" fill="#a5d6ff">Thomas Fairhurst</tspan></text>
-<text class="row" x="590" y="139"><tspan class="label" fill="#b96779">role:</tspan><tspan class="dots" fill="#7f8995"> ............. </tspan><tspan class="value" fill="#a5d6ff">Co-founder &amp; CTO at Leadlord</tspan></text>
-<text class="row" x="590" y="168"><tspan class="label" fill="#b96779">building:</tspan><tspan class="dots" fill="#7f8995"> ......... </tspan><tspan class="value" fill="#a5d6ff">Compliant marketing campaigns,</tspan></text>
-<text class="row value" x="590" y="191" fill="#a5d6ff">                    fast and affordable</text>
-  <text class="section" x="590" y="246" fill="#eee9e2">- work <tspan class="dots" fill="#7f8995">-------------------------------------------</tspan></text>
-  <text class="row" x="590" y="278"><tspan class="label" fill="#b96779">previously:</tspan><tspan class="dots" fill="#7f8995"> ....... </tspan><tspan class="value" fill="#a5d6ff">PhoneHost — AI call handling</tspan></text>
-<text class="row value" x="590" y="301" fill="#a5d6ff">                    for restaurants</text>
-<text class="row" x="590" y="330"><tspan class="label" fill="#b96779">open_source:</tspan><tspan class="dots" fill="#7f8995"> ...... </tspan><tspan class="value" fill="#a5d6ff">toks · agentdictate</tspan></text>
-  <text class="section" x="590" y="382" fill="#eee9e2">- current <tspan class="dots" fill="#7f8995">----------------------------------------</tspan></text>
-  <text class="row" x="590" y="414"><tspan class="label" fill="#b96779">following:</tspan><tspan class="dots" fill="#7f8995"> ........ </tspan><tspan class="value" fill="#a5d6ff">Bun · GPUI · SpacetimeDB</tspan></text>
-<text class="row" x="590" y="443"><tspan class="label" fill="#b96779">principle:</tspan><tspan class="dots" fill="#7f8995"> ........ </tspan><tspan class="value" fill="#a5d6ff">Keep it simple, stupid.</tspan></text>
-<text class="row" x="590" y="472"><tspan class="label" fill="#b96779">education:</tspan><tspan class="dots" fill="#7f8995"> ........ </tspan><tspan class="value" fill="#a5d6ff">McGill CS → Imperial MSc</tspan></text>
-<text class="row value" x="590" y="495" fill="#a5d6ff">                    Advanced Computing</text>
-  <text class="row" x="590" y="560" fill="#eee9e2">thomas@leadlord:~$ <tspan class="signal cursor" fill="#72cf93">▮</tspan></text>
+  <text class="host" x="590" y="52">thomas@luzivog</text>
+  <text class="underline" x="590" y="77">---------------</text>
+  <text class="row" x="590" y="111"><tspan class="label" fill="#b96779">Name:</tspan><tspan class="value" fill="#a5d6ff"> Thomas Fairhurst</tspan></text>
+<text class="row" x="590" y="140"><tspan class="label" fill="#b96779">Role:</tspan><tspan class="value" fill="#a5d6ff"> Co-founder &amp; CTO at Leadlord</tspan></text>
+<text class="row" x="590" y="169"><tspan class="label" fill="#b96779">Building:</tspan><tspan class="value" fill="#a5d6ff"> Compliant marketing campaigns,</tspan></text>
+<text class="row value" x="590" y="192" fill="#a5d6ff">          fast and affordable</text>
+<text class="row" x="590" y="221"><tspan class="label" fill="#b96779">Previously:</tspan><tspan class="value" fill="#a5d6ff"> PhoneHost — AI call handling</tspan></text>
+<text class="row value" x="590" y="244" fill="#a5d6ff">            for restaurants</text>
+<text class="row" x="590" y="273"><tspan class="label" fill="#b96779">Open source:</tspan><tspan class="value" fill="#a5d6ff"> toks · agentdictate</tspan></text>
+<text class="row" x="590" y="302"><tspan class="label" fill="#b96779">Following:</tspan><tspan class="value" fill="#a5d6ff"> Bun · GPUI · SpacetimeDB</tspan></text>
+<text class="row" x="590" y="331"><tspan class="label" fill="#b96779">Principle:</tspan><tspan class="value" fill="#a5d6ff"> Keep it simple, stupid.</tspan></text>
+<text class="row" x="590" y="360"><tspan class="label" fill="#b96779">Education:</tspan><tspan class="value" fill="#a5d6ff"> McGill CS → Imperial MSc</tspan></text>
+<text class="row value" x="590" y="383" fill="#a5d6ff">           Advanced Computing</text>
+  <rect x="590" y="430" width="28" height="20" fill="#454b58"/>
+<rect x="618" y="430" width="28" height="20" fill="#a95b6a"/>
+<rect x="646" y="430" width="28" height="20" fill="#63997b"/>
+<rect x="674" y="430" width="28" height="20" fill="#b49a62"/>
+<rect x="702" y="430" width="28" height="20" fill="#678db8"/>
+<rect x="730" y="430" width="28" height="20" fill="#9574aa"/>
+<rect x="758" y="430" width="28" height="20" fill="#6f9eaa"/>
+<rect x="786" y="430" width="28" height="20" fill="#a9adb5"/>
+<rect x="590" y="450" width="28" height="20" fill="#697181"/>
+<rect x="618" y="450" width="28" height="20" fill="#d9788b"/>
+<rect x="646" y="450" width="28" height="20" fill="#89c7a4"/>
+<rect x="674" y="450" width="28" height="20" fill="#dec47e"/>
+<rect x="702" y="450" width="28" height="20" fill="#8ab7e8"/>
+<rect x="730" y="450" width="28" height="20" fill="#bd94d3"/>
+<rect x="758" y="450" width="28" height="20" fill="#91c7d3"/>
+<rect x="786" y="450" width="28" height="20" fill="#eee9e2"/>
 </svg>
