@@ -14,7 +14,9 @@
     .portrait { font-weight: 500; }
     .label { fill: #b96779; font-weight: 600; }
     .dots { fill: #7f8995; }
-    .row { font-size: 15.8px; }
+    .value { fill: #a5d6ff; }
+    .row { font-size: 15.1px; }
+    .output-header, .section { font-size: 15.1px; }
     .signal { fill: #72cf93; }
     .cursor { animation: blink 1.1s steps(2, start) infinite; }
     @keyframes blink { 50% { opacity: 0; } }
@@ -3095,35 +3097,20 @@
 <text class="portrait" x="525.6" y="567.6" font-size="10.6" fill="#9c8a90">?</text>
 <text class="portrait" x="532.0" y="567.6" font-size="10.6" fill="#a28a90">?</text>
 <text class="portrait" x="538.4" y="567.6" font-size="10.6" fill="#a28a90">]</text>
-  <text x="590" y="38" font-size="16.5" fill="#eee9e2">thomas@leadlord:~$ whoami</text>
-  <line x1="590" y1="59" x2="1145" y2="59" stroke="#242932"/>
-  <circle cx="1145" cy="35" r="5" fill="#72cf93"/>
-  <text class="row label" x="590" y="96" fill="#b96779">Name</text>
-<text class="row dots" x="702" y="96" fill="#7f8995">....</text>
-<text class="row value" x="752" y="96" fill="#eee9e2">Thomas Fairhurst</text>
-<text class="row label" x="590" y="139" fill="#b96779">Role</text>
-<text class="row dots" x="702" y="139" fill="#7f8995">....</text>
-<text class="row value" x="752" y="139" fill="#eee9e2">Co-founder &amp; CTO at Leadlord</text>
-<text class="row label" x="590" y="182" fill="#b96779">Building</text>
-<text class="row dots" x="702" y="182" fill="#7f8995">....</text>
-<text class="row value" x="752" y="182" fill="#eee9e2">Compliant marketing campaigns,</text>
-<text class="row value" x="752" y="206" fill="#eee9e2">fast and affordable</text>
-<text class="row label" x="590" y="249" fill="#b96779">Previously</text>
-<text class="row dots" x="702" y="249" fill="#7f8995">....</text>
-<text class="row value" x="752" y="249" fill="#eee9e2">PhoneHost — AI call handling for restaurants</text>
-<text class="row label" x="590" y="292" fill="#b96779">Open source</text>
-<text class="row dots" x="702" y="292" fill="#7f8995">....</text>
-<text class="row value" x="752" y="292" fill="#eee9e2">toks · agentdictate</text>
-<text class="row label" x="590" y="335" fill="#b96779">Following</text>
-<text class="row dots" x="702" y="335" fill="#7f8995">....</text>
-<text class="row value" x="752" y="335" fill="#eee9e2">Bun · GPUI · SpacetimeDB</text>
-<text class="row label" x="590" y="378" fill="#b96779">Principle</text>
-<text class="row dots" x="702" y="378" fill="#7f8995">....</text>
-<text class="row value" x="752" y="378" fill="#eee9e2">Keep it simple, stupid.</text>
-<text class="row label" x="590" y="421" fill="#b96779">Education</text>
-<text class="row dots" x="702" y="421" fill="#7f8995">....</text>
-<text class="row value" x="752" y="421" fill="#eee9e2">McGill CS → Imperial MSc</text>
-<text class="row value" x="752" y="445" fill="#eee9e2">Advanced Computing</text>
-  <text x="590" y="560" font-size="16.5" fill="#eee9e2">thomas@leadlord:~$</text>
-  <text class="signal cursor" x="777" y="560" font-size="16.5" fill="#72cf93">▮</text>
+  <text class="row" x="590" y="38" fill="#eee9e2">thomas@leadlord:~$ ./profile</text>
+  <text class="output-header" x="590" y="75" fill="#eee9e2">thomas@leadlord<tspan class="dots" fill="#7f8995"> ----------------------------------</tspan></text>
+  <text class="row" x="590" y="110"><tspan class="label" fill="#b96779">name:</tspan><tspan class="dots" fill="#7f8995"> ............. </tspan><tspan class="value" fill="#a5d6ff">Thomas Fairhurst</tspan></text>
+<text class="row" x="590" y="139"><tspan class="label" fill="#b96779">role:</tspan><tspan class="dots" fill="#7f8995"> ............. </tspan><tspan class="value" fill="#a5d6ff">Co-founder &amp; CTO at Leadlord</tspan></text>
+<text class="row" x="590" y="168"><tspan class="label" fill="#b96779">building:</tspan><tspan class="dots" fill="#7f8995"> ......... </tspan><tspan class="value" fill="#a5d6ff">Compliant marketing campaigns,</tspan></text>
+<text class="row value" x="590" y="191" fill="#a5d6ff">                    fast and affordable</text>
+  <text class="section" x="590" y="246" fill="#eee9e2">- work <tspan class="dots" fill="#7f8995">-------------------------------------------</tspan></text>
+  <text class="row" x="590" y="278"><tspan class="label" fill="#b96779">previously:</tspan><tspan class="dots" fill="#7f8995"> ....... </tspan><tspan class="value" fill="#a5d6ff">PhoneHost — AI call handling</tspan></text>
+<text class="row value" x="590" y="301" fill="#a5d6ff">                    for restaurants</text>
+<text class="row" x="590" y="330"><tspan class="label" fill="#b96779">open_source:</tspan><tspan class="dots" fill="#7f8995"> ...... </tspan><tspan class="value" fill="#a5d6ff">toks · agentdictate</tspan></text>
+  <text class="section" x="590" y="382" fill="#eee9e2">- current <tspan class="dots" fill="#7f8995">----------------------------------------</tspan></text>
+  <text class="row" x="590" y="414"><tspan class="label" fill="#b96779">following:</tspan><tspan class="dots" fill="#7f8995"> ........ </tspan><tspan class="value" fill="#a5d6ff">Bun · GPUI · SpacetimeDB</tspan></text>
+<text class="row" x="590" y="443"><tspan class="label" fill="#b96779">principle:</tspan><tspan class="dots" fill="#7f8995"> ........ </tspan><tspan class="value" fill="#a5d6ff">Keep it simple, stupid.</tspan></text>
+<text class="row" x="590" y="472"><tspan class="label" fill="#b96779">education:</tspan><tspan class="dots" fill="#7f8995"> ........ </tspan><tspan class="value" fill="#a5d6ff">McGill CS → Imperial MSc</tspan></text>
+<text class="row value" x="590" y="495" fill="#a5d6ff">                    Advanced Computing</text>
+  <text class="row" x="590" y="560" fill="#eee9e2">thomas@leadlord:~$ <tspan class="signal cursor" fill="#72cf93">▮</tspan></text>
 </svg>
