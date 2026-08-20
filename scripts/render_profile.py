@@ -31,6 +31,7 @@ class Palette:
     text: str
     muted: str
     label: str
+    value: str
     signal: str
 
 
@@ -49,6 +50,7 @@ PALETTES = {
         text="#eee9e2",
         muted="#7f8995",
         label="#b96779",
+        value="#a5d6ff",
         signal="#72cf93",
     ),
     "light": Palette(
@@ -58,20 +60,27 @@ PALETTES = {
         text="#2d2927",
         muted="#8d847d",
         label="#833b4d",
+        value="#0969da",
         signal="#2f7d52",
     ),
 }
 
 
-ROWS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("Name", ("Thomas Fairhurst",)),
-    ("Role", ("Co-founder & CTO at Leadlord",)),
-    ("Building", ("Compliant marketing campaigns,", "fast and affordable")),
-    ("Previously", ("PhoneHost — AI call handling for restaurants",)),
-    ("Open source", ("toks · agentdictate",)),
-    ("Following", ("Bun · GPUI · SpacetimeDB",)),
-    ("Principle", ("Keep it simple, stupid.",)),
-    ("Education", ("McGill CS → Imperial MSc", "Advanced Computing")),
+IDENTITY_ROWS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("name", ("Thomas Fairhurst",)),
+    ("role", ("Co-founder & CTO at Leadlord",)),
+    ("building", ("Compliant marketing campaigns,", "fast and affordable")),
+)
+
+WORK_ROWS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("previously", ("PhoneHost — AI call handling", "for restaurants")),
+    ("open_source", ("toks · agentdictate",)),
+)
+
+CURRENT_ROWS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("following", ("Bun · GPUI · SpacetimeDB",)),
+    ("principle", ("Keep it simple, stupid.",)),
+    ("education", ("McGill CS → Imperial MSc", "Advanced Computing")),
 )
 
 
@@ -173,29 +182,60 @@ def portrait_svg(
     return "\n".join(rendered)
 
 
-def rows_svg(palette: Palette) -> str:
+def terminal_rows_svg(
+    rows: tuple[tuple[str, tuple[str, ...]], ...],
+    *,
+    palette: Palette,
+    start_y: int,
+) -> str:
     rendered: list[str] = []
-    cursor_y = 96
-    label_x = 590
-    dots_x = 702
-    value_x = 752
+    cursor_y = start_y
+    value_column = 20
 
-    for label, values in ROWS:
-        rendered.extend(
-            (
-                f'<text class="row label" x="{label_x}" y="{cursor_y}" fill="{palette.label}">{html.escape(label)}</text>',
-                f'<text class="row dots" x="{dots_x}" y="{cursor_y}" fill="{palette.muted}">....</text>',
-                f'<text class="row value" x="{value_x}" y="{cursor_y}" fill="{palette.text}">{html.escape(values[0])}</text>',
-            )
+    for label, values in rows:
+        key = f"{label}:"
+        leader = "." * (value_column - len(key) - 2)
+        rendered.append(
+            f'<text class="row" x="590" y="{cursor_y}">'
+            f'<tspan class="label" fill="{palette.label}">{html.escape(key)}</tspan>'
+            f'<tspan class="dots" fill="{palette.muted}"> {leader} </tspan>'
+            f'<tspan class="value" fill="{palette.value}">{html.escape(values[0])}</tspan>'
+            "</text>"
         )
         for continuation in values[1:]:
-            cursor_y += 24
+            cursor_y += 23
+            padding = " " * value_column
             rendered.append(
-                f'<text class="row value" x="{value_x}" y="{cursor_y}" fill="{palette.text}">{html.escape(continuation)}</text>'
+                f'<text class="row value" x="590" y="{cursor_y}" fill="{palette.value}">'
+                f"{padding}{html.escape(continuation)}</text>"
             )
-        cursor_y += 43
+        cursor_y += 29
 
     return "\n".join(rendered)
+
+
+RULE_WIDTH = 50
+
+
+def rule_svg(title: str, *, y: int, palette: Palette) -> str:
+    head = f"- {title} "
+    rule = "-" * (RULE_WIDTH - len(head))
+    return (
+        f'<text class="section" x="590" y="{y}" fill="{palette.text}">'
+        f"{head}<tspan class=\"dots\" fill=\"{palette.muted}\">{rule}</tspan></text>"
+    )
+
+
+def terminal_output_svg(palette: Palette) -> str:
+    header_rule = "-" * (RULE_WIDTH - len("thomas@leadlord "))
+    return f"""
+  <text class="output-header" x="590" y="75" fill="{palette.text}">thomas@leadlord<tspan class="dots" fill="{palette.muted}"> {header_rule}</tspan></text>
+  {terminal_rows_svg(IDENTITY_ROWS, palette=palette, start_y=110)}
+  {rule_svg("work", y=246, palette=palette)}
+  {terminal_rows_svg(WORK_ROWS, palette=palette, start_y=278)}
+  {rule_svg("current", y=382, palette=palette)}
+  {terminal_rows_svg(CURRENT_ROWS, palette=palette, start_y=414)}
+""".strip()
 
 
 def svg_style(palette: Palette) -> str:
@@ -210,7 +250,9 @@ def svg_style(palette: Palette) -> str:
     .portrait {{ font-weight: 500; }}
     .label {{ fill: {palette.label}; font-weight: 600; }}
     .dots {{ fill: {palette.muted}; }}
-    .row {{ font-size: 15.8px; }}
+    .value {{ fill: {palette.value}; }}
+    .row {{ font-size: 15.1px; }}
+    .output-header, .section {{ font-size: 15.1px; }}
     .signal {{ fill: {palette.signal}; }}
     .cursor {{ animation: blink 1.1s steps(2, start) infinite; }}
     @keyframes blink {{ 50% {{ opacity: 0; }} }}
@@ -239,12 +281,9 @@ def profile_svg(
   <rect x="1" y="1" width="1178" height="598" rx="18" fill="{palette.background}" stroke="{palette.border}" stroke-width="2"/>
   <line x1="558" y1="22" x2="558" y2="578" stroke="{palette.divider}"/>
   {portrait_markup}
-  <text x="590" y="38" font-size="16.5" fill="{palette.text}">thomas@leadlord:~$ whoami</text>
-  <line x1="590" y1="59" x2="1145" y2="59" stroke="{palette.divider}"/>
-  <circle cx="1145" cy="35" r="5" fill="{palette.signal}"/>
-  {rows_svg(palette)}
-  <text x="590" y="560" font-size="16.5" fill="{palette.text}">thomas@leadlord:~$</text>
-  <text class="signal cursor" x="777" y="560" font-size="16.5" fill="{palette.signal}">▮</text>
+  <text class="row" x="590" y="38" fill="{palette.text}">thomas@leadlord:~$ ./profile</text>
+  {terminal_output_svg(palette)}
+  <text class="row" x="590" y="560" fill="{palette.text}">thomas@leadlord:~$ <tspan class="signal cursor" fill="{palette.signal}">▮</tspan></text>
 </svg>
 """
 
