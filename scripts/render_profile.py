@@ -34,6 +34,7 @@ PALETTE = Palette(
 )
 
 RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
+    ("section", "Who am I?", ""),
     ("meta", "Name", "Thomas Fairhurst"),
     ("meta", "Role", "Co-founder & CTO at Leadlord"),
     ("meta", "Building", "Compliant marketing, fast & affordable"),
@@ -58,7 +59,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("meta", "agentdictate", "Native Linux voice dictation"),
 )
 
-ROW_COUNT = 22
+ROW_COUNT = 23
 ROW_START = 50
 ROW_HEIGHT = 20
 RIGHT_X = 450
