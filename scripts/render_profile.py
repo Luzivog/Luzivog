@@ -37,7 +37,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("prompt", "~", "fastfetch"),
     ("meta", "Name", "Thomas Fairhurst"),
     ("meta", "Role", "Co-founder & CTO at Leadlord"),
-    ("meta", "Building", "Compliant campaigns, fast & affordable"),
+    ("meta", "Building", "Compliant marketing, fast & affordable"),
     ("meta", "Education", "McGill CS → Imperial Advanced Computing"),
     ("blank", "", ""),
     ("meta", "Previously", "PhoneHost — AI Host for Restaurants"),
