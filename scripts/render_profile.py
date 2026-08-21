@@ -49,6 +49,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("meta", "GitHub", "github.com/Luzivog"),
     ("meta", "Website", "thomas-fairhurst.com"),
     ("meta", "LinkedIn", "linkedin.com/in/thomas-fht"),
+    ("meta", "X", "x.com/luzivog"),
     ("blank", "", ""),
     ("section", "Projects", ""),
     ("meta", "Leadlord", "Compliant marketing campaigns"),
@@ -57,7 +58,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("meta", "agentdictate", "Native Linux voice dictation"),
 )
 
-ROW_COUNT = 21
+ROW_COUNT = 22
 ROW_START = 30
 ROW_HEIGHT = 20
 RIGHT_X = 450
@@ -109,7 +110,7 @@ def load_portrait(path: Path) -> bytes:
 
 def profile_svg(portrait_path: Path) -> str:
     if len(RIGHT_ROWS) != ROW_COUNT:
-        raise ValueError("Metadata must occupy exactly 25 terminal rows")
+        raise ValueError(f"Metadata must occupy exactly {ROW_COUNT} terminal rows")
 
     portrait_bytes = load_portrait(portrait_path)
     portrait = base64.b64encode(portrait_bytes).decode("ascii")
