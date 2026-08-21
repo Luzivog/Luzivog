@@ -40,7 +40,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("meta", "Building", "Compliant campaigns, fast & affordable"),
     ("meta", "Education", "McGill CS → Imperial Advanced Computing"),
     ("blank", "", ""),
-    ("meta", "Previously", "PhoneHost — AI call handling for restaurants"),
+    ("meta", "Previously", "PhoneHost — AI calls for restaurants"),
     ("meta", "Open Source", "toks, agentdictate"),
     ("meta", "Following.Runtime", "Bun"),
     ("meta", "Following.Desktop", "GPUI"),
@@ -54,7 +54,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("blank", "", ""),
     ("section", "Projects", ""),
     ("meta", "Leadlord", "Compliant marketing campaigns"),
-    ("meta", "PhoneHost", "AI call handling for restaurants"),
+    ("meta", "PhoneHost", "AI calls for restaurants"),
     ("meta", "toks", "Local AI coding usage tracker"),
     ("meta", "agentdictate", "Native Linux voice dictation"),
     ("blank", "", ""),
@@ -64,8 +64,8 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
 ROW_COUNT = 25
 ROW_START = 30
 ROW_HEIGHT = 20
-RIGHT_X = 390
-RIGHT_WIDTH = 62
+RIGHT_X = 450
+RIGHT_WIDTH = 56
 
 
 def separator_tail(label: str) -> str:
@@ -135,7 +135,7 @@ def profile_svg(portrait_path: Path) -> str:
     text, tspan {{ white-space: pre; }}
   </style>
   <rect width="990px" height="530px" fill="{PALETTE.background}" rx="15"/>
-  <image x="5" y="10" width="380" height="510" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,{portrait}"/>
+  <image x="5" y="10" width="440" height="510" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,{portrait}"/>
   <text x="{RIGHT_X}" y="{ROW_START}" fill="{PALETTE.text}">
   {metadata_svg()}
   </text>
