@@ -133,7 +133,7 @@ def profile_svg(portrait_path: Path) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--portrait", default=Path("assets/avatar.png"), type=Path)
-    parser.add_argument("--output", default=Path("assets/profile.svg"), type=Path)
+    parser.add_argument("--output", default=Path("assets/profile-fastfetch.svg"), type=Path)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(profile_svg(args.portrait), encoding="utf-8")
