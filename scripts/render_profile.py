@@ -1,37 +1,27 @@
 #!/usr/bin/env python3
-"""Render Thomas Fairhurst's Neofetch-style GitHub profile card.
+"""Render a Fastfetch profile on one shared terminal grid.
 
-The curated transparent PNG is the canonical ASCII portrait artwork. This
-script renders a terminal command followed by the portrait and profile output.
+The ASCII cells are sampled from assets/avatar.jpg, the GitHub profile photo
+from https://avatars.githubusercontent.com/u/57810766?v=4 (2026-09-05).
+Two portrait rows fit each metadata row so the face retains detail while both
+columns share baselines and end together. Run from the repository root with
+Python 3 and Pillow: python3 scripts/render_profile.py.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 import html
-from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps
 
 
-@dataclass(frozen=True)
-class Palette:
-    background: str
-    text: str
-    connector: str
-    key: str
-    value: str
-
-
-PALETTE = Palette(
-    background="#161b22",
-    text="#c9d1d9",
-    connector="#616e7f",
-    key="#ffa657",
-    value="#a5d6ff",
-)
+BACKGROUND = "#161b22"
+TEXT = "#c9d1d9"
+MUTED = "#697787"
+KEY = "#ffa657"
+VALUE = "#a5d6ff"
 
 RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("section", "Who am I?", ""),
@@ -59,95 +49,92 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("meta", "agentdictate", "Native Linux voice dictation"),
 )
 
-ROW_COUNT = 23
-ROW_START = 50
+
+FONT_SIZE = 16
+CELL_WIDTH = 9.64
 ROW_HEIGHT = 20
-RIGHT_X = 450
-RIGHT_WIDTH = 56
-PROMPT_X = 16
-PROMPT_Y = 30
+ROW_START = 60
+PORTRAIT_X = 24
+PORTRAIT_ROWS_PER_TEXT_ROW = 2
+PORTRAIT_COLUMNS = 68
+PORTRAIT_CELL_WIDTH = 6
+RIGHT_X = 456
+VALUE_X = RIGHT_X + 14 * CELL_WIDTH
+WIDTH = 1006
+HEIGHT = ROW_START + (len(RIGHT_ROWS) - 1) * ROW_HEIGHT + 30
 
 
-def separator_tail(label: str) -> str:
-    return " -" + "—" * max(1, RIGHT_WIDTH - len(label) - 2)
+def text(x: float, y: float, content: str, color: str, extra: str = "") -> str:
+    return (f'<text x="{x:g}" y="{y:g}" fill="{color}"{extra}>'
+            f'{html.escape(content)}</text>')
 
 
 def metadata_svg() -> str:
+    """Give every label and value an explicit, stable starting column."""
     rendered: list[str] = []
     for index, (kind, label, value) in enumerate(RIGHT_ROWS):
         y = ROW_START + index * ROW_HEIGHT
         if kind == "section":
-            heading = f"- {label}"
-            rendered.append(
-                f'<tspan x="{RIGHT_X}" y="{y}">{html.escape(heading)}</tspan>'
-                f"{separator_tail(heading)}"
-            )
-        elif kind == "blank":
-            rendered.append(f'<tspan x="{RIGHT_X}" y="{y}" class="cc">. </tspan>')
-        else:
-            fixed_length = len(". ") + len(label) + len(":") + len(value) + 2
-            dots = "." * max(1, RIGHT_WIDTH - fixed_length)
-            rendered.append(
-                f'<tspan x="{RIGHT_X}" y="{y}" class="cc">. </tspan>'
-                f'<tspan class="key">{html.escape(label)}</tspan>:'
-                f'<tspan class="cc"> {dots} </tspan>'
-                f'<tspan class="value">{html.escape(value)}</tspan>'
-            )
+            rendered.append(text(RIGHT_X, y, label, TEXT))
+        elif kind == "meta":
+            rendered.append(text(RIGHT_X, y, label + ":", KEY,
+                                 ' font-weight="bold"'))
+            rendered.append(text(VALUE_X, y, value, VALUE))
     return "\n".join(rendered)
 
 
-def load_portrait(path: Path) -> bytes:
-    encoded = path.read_bytes()
+def portrait_svg(path: Path) -> str:
+    """Sample the actual avatar into colored glyphs, without a photo underlay."""
+    row_count = len(RIGHT_ROWS) * PORTRAIT_ROWS_PER_TEXT_ROW
+    row_height = ROW_HEIGHT / PORTRAIT_ROWS_PER_TEXT_ROW
     with Image.open(path) as source:
-        source.load()
-        if source.format != "PNG":
-            raise ValueError(f"{path} must be a PNG image")
-    return encoded
+        source = ImageOps.exif_transpose(source).convert("RGB")
+        # Normalized crop keeps the cap, face and shoulders at their real aspect.
+        width, height = source.size
+        left, top = width * .14, height * .165
+        aspect = PORTRAIT_COLUMNS * PORTRAIT_CELL_WIDTH / (row_count * row_height)
+        crop = source.crop((left, top, left + (height - top) * aspect, height))
+        sampled = crop.resize((PORTRAIT_COLUMNS, row_count), Image.Resampling.LANCZOS)
+        luminance = sampled.convert("L")
+        colors = ImageEnhance.Color(sampled).enhance(1.3)
+
+    ramp = " .,:;irsXA253hMHGS#9B&@"
+    rendered: list[str] = []
+    for row in range(row_count):
+        y = ROW_START - ROW_HEIGHT + row_height + row * row_height
+        cells: list[str] = []
+        for column in range(PORTRAIT_COLUMNS):
+            light = luminance.getpixel((column, row))
+            if light < 24:
+                continue
+            glyph = ramp[min(len(ramp) - 1, int((light / 255) ** .8 * (len(ramp) - 1)))]
+            rgb = colors.getpixel((column, row))
+            color = "#" + "".join(f"{min(255, round(channel * 1.1 + 24)):02x}" for channel in rgb)
+            x = PORTRAIT_X + column * PORTRAIT_CELL_WIDTH
+            cells.append(f'<tspan x="{x:g}" fill="{color}">{html.escape(glyph)}</tspan>')
+        rendered.append(f'<text y="{y:g}">{"".join(cells)}</text>')
+    return f'<g font-size="{row_height:g}" font-weight="bold" aria-hidden="true">' + "\n".join(rendered) + '</g>'
 
 
 def profile_svg(portrait_path: Path) -> str:
-    if len(RIGHT_ROWS) != ROW_COUNT:
-        raise ValueError(f"Metadata must occupy exactly {ROW_COUNT} terminal rows")
-
-    portrait_bytes = load_portrait(portrait_path)
-    portrait = base64.b64encode(portrait_bytes).decode("ascii")
     return f'''<?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated by scripts/render_profile.py. -->
-<svg xmlns="http://www.w3.org/2000/svg" font-family="ConsolasFallback,Consolas,'DejaVu Sans Mono',monospace" width="1006px" height="560px" font-size="16px" role="img" aria-labelledby="title description">
+<!-- Generated by scripts/render_profile.py from the GitHub profile avatar. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" width="{WIDTH}" height="{HEIGHT}" font-family="'DejaVu Sans Mono',Consolas,monospace" font-size="{FONT_SIZE}" role="img" aria-labelledby="title description">
   <title id="title">Thomas Fairhurst — GitHub profile</title>
-  <desc id="description">Co-founder and CTO at Leadlord. Open-source author of toks and agentdictate. Following Bun, GPUI, SpacetimeDB, and Omarchy. Keep it simple, stupid. Plays poker and works out.</desc>
-  <style>
-    @font-face {{
-      src: local('Consolas'), local('Consolas Bold');
-      font-family: 'ConsolasFallback';
-      font-display: swap;
-      -webkit-size-adjust: 109%;
-      size-adjust: 109%;
-    }}
-    .key {{ fill: {PALETTE.key}; font-weight: 600; }}
-    .value {{ fill: {PALETTE.value}; }}
-    .cc {{ fill: {PALETTE.connector}; }}
-    text, tspan {{ white-space: pre; }}
-  </style>
-  <rect width="1006px" height="560px" fill="{PALETTE.background}" rx="15"/>
-  <text x="{PROMPT_X}" y="{PROMPT_Y}" fill="{PALETTE.text}"><tspan class="value">~</tspan><tspan class="cc"> › </tspan>fastfetch</text>
-  <image x="5" y="40" width="440" height="510" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,{portrait}"/>
-  <text x="{RIGHT_X}" y="{ROW_START}" fill="{PALETTE.text}">
-  {metadata_svg()}
-  </text>
+  <desc id="description">A Fastfetch-style profile with an ASCII portrait made from Thomas's GitHub avatar. Co-founder and CTO at Leadlord. Open-source author of toks and agentdictate.</desc>
+  <rect width="{WIDTH}" height="{HEIGHT}" fill="{BACKGROUND}" rx="15"/>
+  <text x="24" y="28" fill="{TEXT}"><tspan fill="{VALUE}">~</tspan><tspan fill="{MUTED}"> › </tspan>fastfetch</text>
+  {portrait_svg(portrait_path)}
+  <g>{metadata_svg()}</g>
 </svg>
 '''
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--portrait", default=Path("assets/portrait-ascii.png"), type=Path)
-    parser.add_argument("--output", default=Path("assets/profile.svg"), type=Path)
-    return parser.parse_args()
-
-
 def main() -> None:
-    args = parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--portrait", default=Path("assets/avatar.jpg"), type=Path)
+    parser.add_argument("--output", default=Path("assets/profile.svg"), type=Path)
+    args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(profile_svg(args.portrait), encoding="utf-8")
 
