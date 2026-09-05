@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a Fastfetch profile on one shared terminal grid.
 
-The ASCII cells are sampled from assets/avatar.png, the GitHub profile photo
+The ASCII cells and their shading come from assets/avatar.png, the GitHub profile photo
 from https://avatars.githubusercontent.com/u/57810766?v=4 (2026-09-05).
 Each portrait row occupies exactly one metadata row, using the same font size,
 character width and baseline. Run from the repository root with
@@ -11,10 +11,12 @@ Python 3 and Pillow: python3 scripts/render_profile.py.
 from __future__ import annotations
 
 import argparse
+import base64
 import html
+import io
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 
 BACKGROUND = "#161b22"
@@ -82,18 +84,40 @@ def metadata_svg() -> str:
 
 
 def portrait_svg(path: Path) -> str:
-    """Sample the actual avatar into colored glyphs, without a photo underlay."""
+    """Keep one glyph per cell, with the avatar's fine shading inside its strokes."""
     row_count = len(RIGHT_ROWS)
+    portrait_width = PORTRAIT_COLUMNS * CELL_WIDTH
+    portrait_height = row_count * ROW_HEIGHT
     with Image.open(path) as source:
         source = ImageOps.exif_transpose(source).convert("RGB")
-        # Normalized crop keeps the cap, face and shoulders at their real aspect.
         width, height = source.size
-        left, top = width * .14, height * .165
-        aspect = PORTRAIT_COLUMNS * CELL_WIDTH / (row_count * ROW_HEIGHT)
-        crop = source.crop((left, top, left + (height - top) * aspect, height))
-        sampled = crop.resize((PORTRAIT_COLUMNS, row_count), Image.Resampling.LANCZOS)
-        luminance = sampled.convert("L")
-        colors = ImageEnhance.Color(sampled).enhance(1.3)
+        # Tuned to this avatar: retain the cap and chin, devote more rows to the
+        # face, and keep its proportions when fitting the unchanged terminal grid.
+        left, top, crop_height = width * 84 / 460, height * 80 / 460, height * 300 / 460
+        crop_width = crop_height * portrait_width / portrait_height
+        crop = source.crop((left, top, left + crop_width, top + crop_height))
+        crop = ImageEnhance.Color(crop).enhance(1.12)
+        crop = crop.filter(ImageFilter.UnsharpMask(radius=7, percent=70, threshold=3))
+
+    sampled = crop.resize((PORTRAIT_COLUMNS, row_count), Image.Resampling.LANCZOS)
+    luminance = sampled.convert("L")
+
+    # A photo-derived paint fills only the letter strokes. Keeping colour detail
+    # within each glyph avoids averaging away the eyes and teeth at 23 rows.
+    shading = crop.point(lambda channel: min(255, int(channel * 1.05 + 16))).convert("RGBA")
+    alpha = crop.convert("L").point(lambda light: max(0, min(255, int((light - 18) * 255 / 16))))
+    shading.putalpha(alpha)
+    encoded = io.BytesIO()
+    shading.save(encoded, format="PNG")
+    paint = base64.b64encode(encoded.getvalue()).decode("ascii")
+    pattern = (
+        '<defs><pattern id="portrait-shading" patternUnits="userSpaceOnUse" '
+        f'x="{PORTRAIT_X}" y="{ROW_START - ROW_HEIGHT}" '
+        f'width="{portrait_width:g}" height="{portrait_height:g}">'
+        f'<image width="{portrait_width:g}" height="{portrait_height:g}" '
+        f'preserveAspectRatio="none" href="data:image/png;base64,{paint}"/>'
+        '</pattern></defs>'
+    )
 
     ramp = " .,:;irsXA253hMHGS#9B&@"
     rendered: list[str] = []
@@ -105,12 +129,11 @@ def portrait_svg(path: Path) -> str:
             if light < 24:
                 continue
             glyph = ramp[min(len(ramp) - 1, int((light / 255) ** .8 * (len(ramp) - 1)))]
-            rgb = colors.getpixel((column, row))
-            color = "#" + "".join(f"{min(255, round(channel * 1.1 + 24)):02x}" for channel in rgb)
             x = PORTRAIT_X + column * CELL_WIDTH
-            cells.append(f'<tspan x="{x:g}" fill="{color}">{html.escape(glyph)}</tspan>')
+            cells.append(f'<tspan x="{x:g}">{html.escape(glyph)}</tspan>')
         rendered.append(f'<text y="{y:g}">{"".join(cells)}</text>')
-    return '<g font-weight="bold" aria-hidden="true">' + "\n".join(rendered) + '</g>'
+    return (pattern + '<g font-weight="bold" aria-hidden="true" fill="url(#portrait-shading)">'
+            + "\n".join(rendered) + '</g>')
 
 
 def profile_svg(portrait_path: Path) -> str:
@@ -130,7 +153,7 @@ def profile_svg(portrait_path: Path) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--portrait", default=Path("assets/avatar.png"), type=Path)
-    parser.add_argument("--output", default=Path("assets/profile-grid.svg"), type=Path)
+    parser.add_argument("--output", default=Path("assets/profile-face.svg"), type=Path)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(profile_svg(args.portrait), encoding="utf-8")
