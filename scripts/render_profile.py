@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a Fastfetch profile on one shared terminal grid.
 
-The ASCII cells are sampled from assets/avatar.jpg, the GitHub profile photo
+The ASCII cells are sampled from assets/avatar.png, the GitHub profile photo
 from https://avatars.githubusercontent.com/u/57810766?v=4 (2026-09-05).
 Two portrait rows fit each metadata row so the face retains detail while both
 columns share baselines and end together. Run from the repository root with
@@ -132,7 +132,7 @@ def profile_svg(portrait_path: Path) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--portrait", default=Path("assets/avatar.jpg"), type=Path)
+    parser.add_argument("--portrait", default=Path("assets/avatar.png"), type=Path)
     parser.add_argument("--output", default=Path("assets/profile.svg"), type=Path)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
