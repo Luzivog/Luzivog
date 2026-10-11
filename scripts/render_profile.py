@@ -30,7 +30,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("meta", "Name", "Thomas Fairhurst"),
     ("meta", "Role", "Co-founder & CTO at Leadlord"),
     ("meta", "Building", "Compliant marketing, fast & affordable"),
-    ("meta", "Education", "McGill CS → Imperial Advanced Computing"),
+    ("meta", "Education", "Imperial MSc student · McGill CS grad"),
     ("blank", "", ""),
     ("meta", "Previously", "PhoneHost — AI Host for Restaurants"),
     ("meta", "Open Source", "toks, agentdictate"),
@@ -40,7 +40,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("blank", "", ""),
     ("section", "Contact", ""),
     ("meta", "GitHub", "github.com/Luzivog"),
-    ("meta", "Website", "thomas-fairhurst.com"),
+    ("meta", "Website", "thomasfairhurst.com"),
     ("meta", "LinkedIn", "linkedin.com/in/thomas-fht"),
     ("meta", "X", "x.com/luzivog"),
     ("blank", "", ""),
@@ -49,6 +49,7 @@ RIGHT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("meta", "PhoneHost", "AI Host for Restaurants"),
     ("meta", "toks", "Local AI coding usage tracker"),
     ("meta", "agentdictate", "Native Linux voice dictation"),
+    ("meta", "Planner", "Imperial module planner"),
 )
 
 
@@ -103,7 +104,7 @@ def portrait_svg(path: Path) -> str:
     luminance = sampled.convert("L")
 
     # A photo-derived paint fills only the letter strokes. Keeping colour detail
-    # within each glyph avoids averaging away the eyes and teeth at 23 rows.
+    # within each glyph avoids averaging away the eyes and teeth at one glyph per row.
     shading = crop.point(lambda channel: min(255, int(channel * 1.05 + 16))).convert("RGBA")
     alpha = crop.convert("L").point(lambda light: max(0, min(255, int((light - 18) * 255 / 16))))
     shading.putalpha(alpha)
