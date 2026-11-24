@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Render a Fastfetch profile on one shared terminal grid.
+"""Render a Fastfetch profile card from Thomas's GitHub avatar.
 
-The ASCII cells and their shading come from assets/avatar.png, the GitHub profile photo
-from https://avatars.githubusercontent.com/u/57810766?v=4 (2026-09-05).
-Each portrait row occupies exactly one metadata row, using the same font size,
-character width and baseline. Run from the repository root with
-Python 3 and Pillow: python3 scripts/render_profile.py.
+The portrait is rendered as a crisp truecolor terminal pixel mosaic (chafa-style
+half-block aesthetic) from assets/avatar.png, the GitHub profile photo from
+https://avatars.githubusercontent.com/u/57810766?v=4 (2026-09-05).
+
+Run from the repository root with Python 3 and Pillow:
+    python3 scripts/render_profile.py
 """
 
 from __future__ import annotations
 
 import argparse
 import base64
+from collections import deque
 import html
 import io
 from pathlib import Path
@@ -20,6 +22,7 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 
 BACKGROUND = "#161b22"
+BG_RGB = (22, 27, 34)
 TEXT = "#c9d1d9"
 MUTED = "#697787"
 KEY = "#ffa657"
@@ -57,12 +60,25 @@ FONT_SIZE = 16
 CELL_WIDTH = 9.64
 ROW_HEIGHT = 20
 ROW_START = 60
-PORTRAIT_X = 24
-PORTRAIT_COLUMNS = 42
 RIGHT_X = 456
 VALUE_X = RIGHT_X + 14 * CELL_WIDTH
 WIDTH = 1006
 HEIGHT = ROW_START + (len(RIGHT_ROWS) - 1) * ROW_HEIGHT + 30
+
+# Portrait geometry aligned to the prompt column (x=24), "Who am I?" cap top
+# (y=48), and the "Planner:" row (y=524), leaving a ~42px gutter before RIGHT_X.
+PORTRAIT_X = 22
+PORTRAIT_Y = 48
+PORTRAIT_WIDTH = 392
+PORTRAIT_HEIGHT = 476
+GRID_COLS = 100
+GRID_ROWS = 122
+BLOCK_SCALE = 4
+
+
+def smoothstep(value: float) -> float:
+    clamped = max(0.0, min(1.0, value))
+    return clamped * clamped * (3.0 - 2.0 * clamped)
 
 
 def text(x: float, y: float, content: str, color: str, extra: str = "") -> str:
@@ -84,57 +100,189 @@ def metadata_svg() -> str:
     return "\n".join(rendered)
 
 
-def portrait_svg(path: Path) -> str:
-    """Keep one glyph per cell, with the avatar's fine shading inside its strokes."""
-    row_count = len(RIGHT_ROWS)
-    portrait_width = PORTRAIT_COLUMNS * CELL_WIDTH
-    portrait_height = row_count * ROW_HEIGHT
-    with Image.open(path) as source:
-        source = ImageOps.exif_transpose(source).convert("RGB")
-        width, height = source.size
-        # Tuned to this avatar: retain the cap and chin, devote more rows to the
-        # face, and keep its proportions when fitting the unchanged terminal grid.
-        left, top, crop_height = width * 84 / 460, height * 80 / 460, height * 300 / 460
-        crop_width = crop_height * portrait_width / portrait_height
-        crop = source.crop((left, top, left + crop_width, top + crop_height))
-        crop = ImageEnhance.Color(crop).enhance(1.12)
-        crop = crop.filter(ImageFilter.UnsharpMask(radius=7, percent=70, threshold=3))
+def segment_foreground(source: Image.Image) -> Image.Image:
+    """Separate the dark backdrop from hair/shirt via border-seeded flood fill."""
+    width, height = source.size
+    pixels = source.load()
 
-    sampled = crop.resize((PORTRAIT_COLUMNS, row_count), Image.Resampling.LANCZOS)
-    luminance = sampled.convert("L")
+    # Dark neutral pixels reachable from the image borders belong to the night
+    # backdrop; warm dark curls inside the silhouette are left untouched.
+    bg_candidate = bytearray(width * height)
+    bokeh_y = int(height * 380 / 460)
+    bokeh_x = int(width * 155 / 460)
+    for y in range(height):
+        row_offset = y * width
+        for x in range(width):
+            r, g, b = pixels[x, y]
+            lum = 0.299 * r + 0.587 * g + 0.114 * b
+            chroma = max(r, g, b) - min(r, g, b)
+            if (lum < 30.0 and chroma < 16.0) or (y >= bokeh_y and x < bokeh_x):
+                bg_candidate[row_offset + x] = 1
 
-    # A photo-derived paint fills only the letter strokes. Keeping colour detail
-    # within each glyph avoids averaging away the eyes and teeth at one glyph per row.
-    shading = crop.point(lambda channel: min(255, int(channel * 1.05 + 16))).convert("RGBA")
-    alpha = crop.convert("L").point(lambda light: max(0, min(255, int((light - 18) * 255 / 16))))
-    shading.putalpha(alpha)
-    encoded = io.BytesIO()
-    shading.save(encoded, format="PNG")
-    paint = base64.b64encode(encoded.getvalue()).decode("ascii")
-    pattern = (
-        '<defs><pattern id="portrait-shading" patternUnits="userSpaceOnUse" '
-        f'x="{PORTRAIT_X}" y="{ROW_START - ROW_HEIGHT}" '
-        f'width="{portrait_width:g}" height="{portrait_height:g}">'
-        f'<image width="{portrait_width:g}" height="{portrait_height:g}" '
-        f'preserveAspectRatio="none" href="data:image/png;base64,{paint}"/>'
-        '</pattern></defs>'
-    )
+    background = bytearray(width * height)
+    queue: deque[tuple[int, int]] = deque()
+    right_border_limit = int(height * 320 / 460)
 
-    ramp = " .,:;irsXA253hMHGS#9B&@"
-    rendered: list[str] = []
-    for row in range(row_count):
-        y = ROW_START + row * ROW_HEIGHT
-        cells: list[str] = []
-        for column in range(PORTRAIT_COLUMNS):
-            light = luminance.getpixel((column, row))
-            if light < 24:
+    def seed(x: int, y: int) -> None:
+        idx = y * width + x
+        if bg_candidate[idx] and not background[idx]:
+            background[idx] = 1
+            queue.append((x, y))
+
+    for x in range(width):
+        seed(x, 0)
+    for y in range(height):
+        seed(0, y)
+        if y < right_border_limit:
+            seed(width - 1, y)
+
+    while queue:
+        cx, cy = queue.popleft()
+        for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+            if 0 <= nx < width and 0 <= ny < height:
+                idx = ny * width + nx
+                if bg_candidate[idx] and not background[idx]:
+                    background[idx] = 1
+                    queue.append((nx, ny))
+
+    # Keep the largest connected foreground component (head and torso) so stray
+    # background lights never survive as floating speckles.
+    visited = bytearray(width * height)
+    best_component: list[int] = []
+    for y in range(height):
+        for x in range(width):
+            start = y * width + x
+            if background[start] or visited[start]:
                 continue
-            glyph = ramp[min(len(ramp) - 1, int((light / 255) ** .8 * (len(ramp) - 1)))]
-            x = PORTRAIT_X + column * CELL_WIDTH
-            cells.append(f'<tspan x="{x:g}">{html.escape(glyph)}</tspan>')
-        rendered.append(f'<text y="{y:g}">{"".join(cells)}</text>')
-    return (pattern + '<g font-weight="bold" aria-hidden="true" fill="url(#portrait-shading)">'
-            + "\n".join(rendered) + '</g>')
+            comp: list[int] = [start]
+            visited[start] = 1
+            q = deque([(x, y)])
+            while q:
+                cx, cy = q.popleft()
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if 0 <= nx < width and 0 <= ny < height:
+                        idx = ny * width + nx
+                        if not background[idx] and not visited[idx]:
+                            visited[idx] = 1
+                            comp.append(idx)
+                            q.append((nx, ny))
+            if len(comp) > len(best_component):
+                best_component = comp
+
+    fg_bytes = bytearray(width * height)
+    for idx in best_component:
+        fg_bytes[idx] = 255
+
+    mask = Image.frombytes("L", (width, height), bytes(fg_bytes))
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=1.4))
+    return mask.point(lambda v: max(0, min(255, int((v / 255.0 - 0.14) / 0.80 * 255))))
+
+
+def balance_flash(source: Image.Image) -> Image.Image:
+    """Soften direct-flash speculars while keeping natural skin and dark curls."""
+    width, height = source.size
+    pixels = source.load()
+    balanced = Image.new("RGB", (width, height))
+    out = balanced.load()
+
+    for y in range(height):
+        for x in range(width):
+            r, g, b = pixels[x, y]
+            l_in = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+            if l_in > 0.62:
+                l_out = 0.62 + (l_in - 0.62) * 0.58
+            elif l_in < 0.26:
+                l_out = l_in * 1.15
+            else:
+                l_out = l_in
+            scale = l_out / l_in if l_in > 1e-4 else 1.0
+            out[x, y] = (
+                min(255, int(r * scale)),
+                min(255, int(g * scale)),
+                min(255, int(b * scale)),
+            )
+
+    balanced = balanced.filter(ImageFilter.UnsharpMask(radius=14, percent=12, threshold=2))
+    balanced = ImageEnhance.Contrast(balanced).enhance(1.06)
+    balanced = ImageEnhance.Color(balanced).enhance(0.95)
+    return balanced.filter(ImageFilter.UnsharpMask(radius=1.1, percent=50, threshold=2))
+
+
+def portrait_svg(path: Path) -> str:
+    """Render a crisp truecolor terminal-block bust seamlessly blended into #161b22."""
+    with Image.open(path) as raw:
+        source = ImageOps.exif_transpose(raw).convert("RGB")
+
+    width, height = source.size
+    alpha_full = segment_foreground(source)
+    graded = balance_flash(source)
+
+    # Align cap top (y=84) flush with "Who am I?" and left brim/curls (x=80..86)
+    # with the prompt column, extending the full burgundy bust to "Planner:".
+    top = height * 82 / 460
+    crop_h = height * 377 / 460
+    crop_w = crop_h * PORTRAIT_WIDTH / PORTRAIT_HEIGHT
+    left = width * 79 / 460
+    box = (left, top, left + crop_w, top + crop_h)
+
+    crop_rgb = graded.crop(box)
+    crop_alpha = alpha_full.crop(box)
+    cw, ch = crop_rgb.size
+    rgb_px = crop_rgb.load()
+    a_px = crop_alpha.load()
+
+    # Preserve 100% rich burgundy across the collar and upper chest; fade only
+    # the bottom 15% and a sloped outer-right shoulder contour into #161b22 so
+    # the head never floats and no shoulder highlight wisp extends past the fade.
+    composited = Image.new("RGB", (cw, ch), BG_RGB)
+    comp_px = composited.load()
+    feathered_alpha = Image.new("L", (cw, ch), 0)
+    fa_px = feathered_alpha.load()
+
+    for y in range(ch):
+        yy = y / max(1, ch - 1)
+        bottom_fade = smoothstep((0.99 - yy) / 0.15)
+        shoulder_weight = smoothstep((yy - 0.63) / 0.05)
+        # Slope the outer-right shoulder boundary gently outward as yy descends
+        # so the upper shoulder fabric highlight is cleanly tucked inside the fade.
+        right_limit = 0.90 + 0.08 * smoothstep((yy - 0.66) / 0.22)
+        for x in range(cw):
+            xx = x / max(1, cw - 1)
+            right_edge = smoothstep((right_limit - xx) / 0.13)
+            right_fade = 1.0 - shoulder_weight * (1.0 - right_edge)
+            a = (a_px[x, y] / 255.0) * bottom_fade * right_fade
+            fa_px[x, y] = int(a * 255)
+            r, g, b = rgb_px[x, y]
+            comp_px[x, y] = (
+                int(r * a + BG_RGB[0] * (1.0 - a)),
+                int(g * a + BG_RGB[1] * (1.0 - a)),
+                int(b * a + BG_RGB[2] * (1.0 - a)),
+            )
+
+    small = composited.resize((GRID_COLS, GRID_ROWS), Image.Resampling.LANCZOS)
+    small_alpha = feathered_alpha.resize((GRID_COLS, GRID_ROWS), Image.Resampling.LANCZOS)
+    s_px = small.load()
+    sa_px = small_alpha.load()
+    for y in range(GRID_ROWS):
+        for x in range(GRID_COLS):
+            if sa_px[x, y] < 10:
+                s_px[x, y] = BG_RGB
+
+    # Pre-upscale by an exact integer factor so pixel cells remain razor-sharp
+    # even on viewers that ignore image-rendering="pixelated".
+    crisp = small.resize(
+        (GRID_COLS * BLOCK_SCALE, GRID_ROWS * BLOCK_SCALE),
+        Image.Resampling.NEAREST,
+    )
+    encoded = io.BytesIO()
+    crisp.save(encoded, format="PNG", optimize=True)
+    b64 = base64.b64encode(encoded.getvalue()).decode("ascii")
+    return (
+        f'<image x="{PORTRAIT_X}" y="{PORTRAIT_Y}" '
+        f'width="{PORTRAIT_WIDTH}" height="{PORTRAIT_HEIGHT}" '
+        f'image-rendering="pixelated" aria-hidden="true" '
+        f'href="data:image/png;base64,{b64}"/>'
+    )
 
 
 def profile_svg(portrait_path: Path) -> str:
@@ -142,7 +290,7 @@ def profile_svg(portrait_path: Path) -> str:
 <!-- Generated by scripts/render_profile.py from the GitHub profile avatar. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" width="{WIDTH}" height="{HEIGHT}" font-family="'DejaVu Sans Mono',Consolas,monospace" font-size="{FONT_SIZE}" role="img" aria-labelledby="title description">
   <title id="title">Thomas Fairhurst — GitHub profile</title>
-  <desc id="description">A Fastfetch-style profile with an ASCII portrait made from Thomas's GitHub avatar. Co-founder and CTO at Leadlord. Open-source author of toks and agentdictate.</desc>
+  <desc id="description">A Fastfetch-style profile with a truecolor terminal pixel portrait made from Thomas's GitHub avatar. Co-founder and CTO at Leadlord. Open-source author of toks and agentdictate.</desc>
   <rect width="{WIDTH}" height="{HEIGHT}" fill="{BACKGROUND}" rx="15"/>
   <text x="24" y="28" fill="{TEXT}"><tspan fill="{VALUE}">~</tspan><tspan fill="{MUTED}"> › </tspan>fastfetch</text>
   {portrait_svg(portrait_path)}
@@ -154,7 +302,7 @@ def profile_svg(portrait_path: Path) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--portrait", default=Path("assets/avatar.png"), type=Path)
-    parser.add_argument("--output", default=Path("assets/profile-face.svg"), type=Path)
+    parser.add_argument("--output", default=Path("assets/profile-portrait.svg"), type=Path)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(profile_svg(args.portrait), encoding="utf-8")
